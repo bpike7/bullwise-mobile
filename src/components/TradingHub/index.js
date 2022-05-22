@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import OptionManager from './OptionManager';
-import Watchlist from './Watchlist';
 import PositionOrders from './PositionOrders';
 import PriceSlider from './PriceSlider';
 import SettingsBar from './SettingsBar';
-import Orders from './Orders';
 import Banners from './Banners';
 import { colors } from '../../styles.js'
 import api from '../../api.js';
 import Minichart from './Minichart';
+import AccountInfo from './AccountInfo';
 
 
 export default function () {
@@ -103,12 +102,12 @@ export default function () {
 
   return (
     <View style={styles.container}>
-
+      <AccountInfo />
       <Banners
         notification={notification}
       />
-      <View style={styles.containerMiddle}>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+      <View style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-end', flexDirection: 'row' }}>
+        <View style={{ flex: 1 }}>
           <PositionOrders
             positions={positions}
             orders={orders}
@@ -138,20 +137,14 @@ export default function () {
           handleCreateBuyOrder={handleCreateBuyOrder}
           handleCreateSellOrder={handleCreateSellOrder}
         />
-        {/* <Watchlist
-            watchlist={watchlist}
-            stockInFocus={stockInFocus}
-            positions={positions}
-            handleSetFocus={handleSetFocus}
-          /> */}
         <View style={{ flexDirection: 'row' }}>
-          <Minichart stock={{ ...indices.QQQ, symbol: 'QQQ' }} />
-          <Minichart stock={{ ...indices.SPY, symbol: 'SPY' }} />
-          <Minichart stock={{ ...indices.DIA, symbol: 'DIA' }} />
+          <Minichart stock={indices.QQQ} symbol={'QQQ'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
+          <Minichart stock={indices.SPY} symbol={'SPY'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
+          <Minichart stock={indices.DIA} symbol={'DIA'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
         </View>
         <View style={{ flexDirection: 'row' }}>
           {watchlist.map((wl, i) =>
-            <Minichart key={i} stock={wl} />
+            <Minichart key={i} stock={wl} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
           )}
         </View>
       </View>
@@ -162,7 +155,7 @@ export default function () {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingTop: 30,
     padding: 8,
     backgroundColor: colors.blue3,

@@ -67,7 +67,7 @@ export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateBuyO
   }
 
   return (
-    <View style={{ flexDirection: 'row', height: 80, marginBottom: 10, borderRadius: 8 }}>
+    <View style={{ flexDirection: 'row', height: 80, marginBottom: 20, marginTop: 20, borderRadius: 8 }}>
       {resolveButton('call')}
       <View style={{ ...styles.center }}>
         <TouchableOpacity>

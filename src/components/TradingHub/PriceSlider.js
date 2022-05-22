@@ -12,7 +12,7 @@ export default function ({ stockInFocus = {}, handlePriceSliderChange, priceSlid
         max={stockInFocus.strike_max || 100}
         onChange={val => handlePriceSliderChange(val)}
         width={40}
-        height={305}
+        height={240}
         step={stockInFocus.strike_diff}
         borderRadius={5}
         maximumTrackTintColor={colors.blue1}
