@@ -5,7 +5,6 @@ import { colors } from '../../styles';
 
 export default function ({ orders = [], stockInFocus = {}, findAndHandleFocusFromOrder }) {
   useEffect(() => {
-    console.log(orders);
   }, [orders]);
   return (
     <View style={styles.container}>

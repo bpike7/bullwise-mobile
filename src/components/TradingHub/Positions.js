@@ -2,7 +2,7 @@ import { View, Text, TouchableHighlight, StyleSheet } from 'react-native';
 import { colors } from '../../styles';
 
 
-export default function ({ positions, stockInFocus = {}, findAndHandleFocusFromPosition }) {
+export default function ({ positions = [], stockInFocus = {}, findAndHandleFocusFromPosition }) {
   return (
     <View style={styles.container}>
       <Text style={{ fontWeight: 'bold', fontSize: 20, color: colors.white, marginBottom: 10, marginLeft: 10 }}>Positions</Text>

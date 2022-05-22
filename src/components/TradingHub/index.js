@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import OptionManager from './OptionManager';
 import Watchlist from './Watchlist';
-import Positions from './Positions';
+import PositionOrders from './PositionOrders';
 import PriceSlider from './PriceSlider';
 import SettingsBar from './SettingsBar';
 import Orders from './Orders';
 import Banners from './Banners';
 import { colors } from '../../styles.js'
 import api from '../../api.js';
-import Minicharts from './Minicharts';
+import Minichart from './Minichart';
 
 
 export default function () {
+  const [indices, setIndices] = useState({});
   const [watchlist, setWatchlist] = useState([]);
-  const [watchlistOrderRef, setWatchlistOrderRef] = useState();
   const [orders, setOrders] = useState([]);
   const [positions, setPositions] = useState([]);
   const [stockInFocus, setFocus] = useState();
@@ -22,60 +22,8 @@ export default function () {
   const [relativeSize, setRelativeSize] = useState(1);
   const [buySellPoint, handleSetBuySellPoint] = useState('bid-ask');
   const [notification, createNotification] = useState();
-  const [indices, setIndices] = useState();
 
   useEffect(() => {
-    api._ws.onmessage = (e) => {
-      console.log('message')
-      const parsed = JSON.parse(e.data);
-
-      if (parsed.indices) setIndices(parsed.indices);
-
-      // Look for changes in the watchlist and append volume_relative_changed and order_changed
-      if (parsed.watchlist) setWatchlist(prev => {
-        return parsed.watchlist.slice(0, 4).map((wl, i) => {
-          const match = prev.slice(0, 4).find(p => p.symbol === wl.symbol);
-          const previousMatchIndex = match ? prev.indexOf(match) : null;
-          if (!match || (previousMatchIndex && previousMatchIndex !== i)) wl.order_changed = true;
-          else wl.order_changed = false;
-          if (match && match.volume_relative !== wl.volume_relative) wl.volume_relative_changed = true;
-          else wl.volume_relative_changed = false
-          return wl;
-        });
-      });
-
-      if (parsed.orders) {
-        setOrders(prev => {
-          const { fresh, completed, cancelled, unchanged } = parsed.orders.reduce((acc, o) => {
-            if (prev.some(po => po.id === o.id && po.status === o.status)) {
-              acc.unchanged.push(o);
-              return acc;
-            }
-            if (o.status === 'filled') acc.completed.push(o);
-            if (o.status === 'open') acc.fresh.push(o);
-            if (o.status === 'cancelled') acc.cancelled.push(o);
-            return acc;
-          }, { fresh: [], completed: [], cancelled: [], unchanged: [] });
-
-          if (fresh.length > 0) handleCreateNotification({
-            message: `Order created: ${fresh.map(({ symbol, option_type, strike, size }) => `${symbol} ${option_type === 'call' ? 'C' : 'P'} $${strike} x${size}`).join(', ')}`,
-            color: colors.white
-          });
-
-          if (completed.length > 0) {
-            (async function () {
-              // const positions = await api.getAllPositions();
-            }());
-            handleCreateNotification({
-              message: `Order filled!: ${completed.map(({ symbol, option_type, strike, size }) => `${symbol} ${option_type === 'call' ? 'C' : 'P'} $${strike} x${size}`).join(', ')}`,
-              color: colors.green
-            });
-          }
-
-          return [...unchanged, ...fresh];
-        });
-      }
-    }
     (async function () {
       try {
         const data = await api.getInitialData();
@@ -87,30 +35,27 @@ export default function () {
         console.log('Initial bootup failure: ', err.response);
       }
     }());
-  }, []);
-
-  useEffect(() => {
-    const watchlistSymbols = watchlist.slice(0, 4).map(({ symbol }) => symbol);
-    const newWatchlistOrderRef = watchlistSymbols.join(',');
-    if (newWatchlistOrderRef !== watchlistOrderRef) {
-      handleCreateNotification({
-        message: 'Watchlist changed!',
-        color: colors.yellow
-      });
-      console.log('watchlist changed')
+    api._ws.onmessage = (e) => {
+      const parsed = JSON.parse(e.data);
+      if (parsed.notification) createNotification({ message: parsed.notification.message, color: parsed.notification.color });
+      if (parsed.indices) setIndices(parsed.indices);
+      if (parsed.watchlist) setWatchlist(parsed.watchlist);
+      if (parsed.orders) setOrders(parsed.orders);
+      if (parsed.positions) setPositions(parsed.positions);
     }
-    setWatchlistOrderRef(newWatchlistOrderRef);
-  }, [watchlist]);
+  }, []);
 
   function handleSetFocus(inFocus) {
     if (inFocus === stockInFocus) return setFocus();
-    const position = inFocus.postions || positions.find(({ symbol }) => inFocus.symbol === symbol);
-    if (position) setPriceSliderPrice(position.strike);
-    inFocus.position = position;
-    const orders = inFocus.orders || (orders || []).filter(({ symbol }) => inFocus.symbol === symbol);
-    inFocus.orders = orders;
-    setPriceSliderPrice(inFocus.strike_close);
+    const strikeMap = {};
+    // Find positions matching touched symbol
+    const positionsMatchingSymbolInFocus = inFocus.positions || positions.filter(({ symbol }) => inFocus.symbol === symbol);
+    positionsMatchingSymbolInFocus.forEach(({ strike, option_type }) => {
+      strikeMap[strike] = option_type;
+    });
+    inFocus.strike_map = strikeMap;
     setFocus(inFocus);
+    setPriceSliderPrice(positionsMatchingSymbolInFocus && positionsMatchingSymbolInFocus.length > 0 ? positionsMatchingSymbolInFocus[0].strike : inFocus.strike_close);
   }
 
   function findAndHandleFocusFromOrder(order) {
@@ -125,7 +70,7 @@ export default function () {
     const inFocus = watchlist.find(({ symbol }) => symbol === position.symbol);
     if (!inFocus) console.log('Unable to find in focus!');
     inFocus.position = position;
-    setFocus(inFocus);
+    handleSetFocus(inFocus);
   }
 
   function handlePriceSliderChange(value) {
@@ -136,12 +81,18 @@ export default function () {
     return setRelativeSize(rs);
   }
 
-  function handleCreateNotification({ color, message }) {
-    createNotification((prev) => prev === message ? ({ message: `${message} `, color }) : ({ message: message, color }));
+  async function handleCreateBuyOrder(option_type) {
+    await api.createBuyOrder({
+      symbol: stockInFocus.symbol,
+      option_type,
+      strike: priceSliderPrice,
+      size_relative: relativeSize,
+      buy_sell_point: buySellPoint
+    });
   }
 
-  async function handleCreateOrder(option_type) {
-    await api.createOrder({
+  async function handleCreateSellOrder(option_type) {
+    await api.createSellOrder({
       symbol: stockInFocus.symbol,
       option_type,
       strike: priceSliderPrice,
@@ -153,53 +104,55 @@ export default function () {
   return (
     <View style={styles.container}>
 
-      <Minicharts
-        indices={indices}
+      <Banners
+        notification={notification}
       />
-      <View>
-        <Banners
-          notification={notification}
-          handleCreateNotification={handleCreateNotification}
-        />
-
-        <View style={styles.containerMiddle}>
-          <View style={{ flex: 1 }}>
-            <Positions
-              positions={positions}
-              stockInFocus={stockInFocus}
-              findAndHandleFocusFromPosition={findAndHandleFocusFromPosition}
-            />
-            <Orders
-              orders={orders}
-              stockInFocus={stockInFocus}
-              findAndHandleFocusFromOrder={findAndHandleFocusFromOrder}
-            />
-            <SettingsBar
-              buySellPoint={buySellPoint}
-              relativeSize={relativeSize}
-              handleSetBuySellPoint={handleSetBuySellPoint}
-              handleSetRelativeSize={handleSetRelativeSize}
-            />
-          </View>
-          <PriceSlider
-            handlePriceSliderChange={handlePriceSliderChange}
-            priceSliderPrice={priceSliderPrice}
+      <View style={styles.containerMiddle}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <PositionOrders
+            positions={positions}
+            orders={orders}
             stockInFocus={stockInFocus}
+            findAndHandleFocusFromPosition={findAndHandleFocusFromPosition}
+            findAndHandleFocusFromOrder={findAndHandleFocusFromOrder}
+          />
+          <SettingsBar
+            buySellPoint={buySellPoint}
+            relativeSize={relativeSize}
+            handleSetBuySellPoint={handleSetBuySellPoint}
+            handleSetRelativeSize={handleSetRelativeSize}
           />
         </View>
+        <PriceSlider
+          handlePriceSliderChange={handlePriceSliderChange}
+          priceSliderPrice={priceSliderPrice}
+          stockInFocus={stockInFocus}
+        />
+      </View>
 
-        <View style={styles.containerBottom}>
-          <OptionManager
-            priceSliderPrice={priceSliderPrice}
-            stockInFocus={stockInFocus}
-            handleCreateOrder={handleCreateOrder}
-          />
-          <Watchlist
+      <View>
+        <OptionManager
+          positions={positions}
+          priceSliderPrice={priceSliderPrice}
+          stockInFocus={stockInFocus}
+          handleCreateBuyOrder={handleCreateBuyOrder}
+          handleCreateSellOrder={handleCreateSellOrder}
+        />
+        {/* <Watchlist
             watchlist={watchlist}
             stockInFocus={stockInFocus}
             positions={positions}
             handleSetFocus={handleSetFocus}
-          />
+          /> */}
+        <View style={{ flexDirection: 'row' }}>
+          <Minichart stock={{ ...indices.QQQ, symbol: 'QQQ' }} />
+          <Minichart stock={{ ...indices.SPY, symbol: 'SPY' }} />
+          <Minichart stock={{ ...indices.DIA, symbol: 'DIA' }} />
+        </View>
+        <View style={{ flexDirection: 'row' }}>
+          {watchlist.map((wl, i) =>
+            <Minichart key={i} stock={wl} />
+          )}
         </View>
       </View>
     </View>

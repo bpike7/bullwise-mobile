@@ -3,16 +3,16 @@ import { useEffect } from 'react';
 import { colors } from '../../styles';
 
 
-export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateOrder }) {
-  const { position, calls = [], puts = [], symbol } = stockInFocus;
-
+export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateBuyOrder, handleCreateSellOrder }) {
+  const { strike_map = {}, calls = [], puts = [], symbol } = stockInFocus;
 
   const matchingCall = calls.find(({ strike }) => strike === priceSliderPrice);
   const matchingPut = puts.find(({ strike }) => strike === priceSliderPrice);
 
+  const existingPositionOptionType = strike_map[priceSliderPrice];
 
   useEffect(() => {
-  }, [stockInFocus])
+  }, [stockInFocus]);
 
   function resolveBidAskColor({ bid_ask_spread }) {
     if (bid_ask_spread >= .2 && bid_ask_spread < .35) return colors.yellow;
@@ -20,31 +20,55 @@ export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateOrde
     return colors.white;
   }
 
+  function resolveButton(option_type) {
+    if (!existingPositionOptionType && !matchingCall && !matchingPut) {
+      return <ButtonNoOption option_type={option_type} />
+    }
+    if (existingPositionOptionType && existingPositionOptionType !== option_type) {
+      return <Button
+        text={'SELL'}
+        color={colors.red}
+        optionType={option_type}
+        resolveBidAskColor={resolveBidAskColor}
+        handleCreateOrder={handleCreateSellOrder}
+      />
+    }
+    if (existingPositionOptionType === option_type) {
+      return <Button
+        text={'BUY'}
+        color={option_type === 'call' ? colors.green : colors.orange}
+        option_type={option_type}
+        contract={option_type === 'call' ? matchingCall : matchingPut}
+        resolveBidAskColor={resolveBidAskColor}
+        handleCreateOrder={handleCreateBuyOrder}
+      />
+    }
+    if (matchingCall && option_type === 'call') {
+      return <Button
+        text={'BUY'}
+        color={colors.green}
+        option_type={option_type}
+        contract={matchingCall}
+        resolveBidAskColor={resolveBidAskColor}
+        handleCreateOrder={handleCreateBuyOrder}
+      />
+    }
+    if (matchingPut && option_type === 'put') {
+      return <Button
+        text={'BUY'}
+        color={colors.orange}
+        option_type={option_type}
+        contract={matchingPut}
+        resolveBidAskColor={resolveBidAskColor}
+        handleCreateOrder={handleCreateBuyOrder}
+      />
+    }
+    return <ButtonNoOption option_type={option_type} />
+  }
+
   return (
-    <View style={styles.container}>
-
-      <TouchableOpacity
-        onPress={() => handleCreateOrder('call')}
-        disabled={calls.length === 0}
-        style={{ ...styles.buyCallButton, borderWidth: matchingCall ? 1 : 0 }}
-      >
-        <View style={{ ...styles.buttonInnerContainer }}>
-          {position?.type === 'call' ?
-            <View style={styles.positionContainerCall}>
-              <Text style={{ ...styles.buttonText, fontSize: 14, color: colors.green }}>{position.size}</Text>
-            </View> : null}
-          <View style={styles.addButtonContainerCall}>
-            <Text style={{ ...styles.buttonText, color: matchingCall ? colors.green : colors.blue3 }}>
-              {position?.type === 'put' ? 'SELL' : 'BUY'}
-            </Text>
-          </View>
-          {/* Bid ask spread */}
-          {matchingCall ? <View style={{ ...styles.bidAskSpread }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: resolveBidAskColor(matchingCall) }}>{matchingCall.bid_ask_spread}</Text>
-          </View> : null}
-        </View>
-      </TouchableOpacity >
-
+    <View style={{ flexDirection: 'row', height: 80, marginBottom: 10, borderRadius: 8 }}>
+      {resolveButton('call')}
       <View style={{ ...styles.center }}>
         <TouchableOpacity>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -53,28 +77,43 @@ export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateOrde
           </View>
         </TouchableOpacity>
       </View>
+      {resolveButton('put')}
+    </View>
+  );
+}
 
-      <TouchableOpacity
-        onPress={() => handleCreateOrder('put')}
-        disabled={puts.length === 0}
-        style={{ ...styles.buyPutButton, borderWidth: matchingPut ? 1 : 0 }}
-      >
-        <View style={styles.buttonInnerContainer}>
-          <View style={styles.addButtonContainerPut}>
-            <Text style={{ ...styles.buttonText, color: matchingPut ? colors.orange : colors.blue3 }}>
-              {position?.type === 'call' ? 'SELL' : 'BUY'}
-            </Text>
-          </View>
-          {position?.type === 'put' ? <View style={styles.positionContainerPut}>
-            <Text style={{ ...styles.buttonText, color: matchingPut ? colors.green : colors.blue3 }}>{position.size}</Text>
-          </View> : null}
+function Button({ option_type, text, color, handleCreateOrder, contract, resolveBidAskColor }) {
+  const borderRadius = option_type === 'call' ? { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 } : { borderTopRightRadius: 8, borderBottomRightRadius: 8 };
+  return (
+    <TouchableOpacity
+      onPress={() => handleCreateOrder(option_type)}
+      style={{ flex: 1, borderColor: color, borderWidth: 1, ...borderRadius }}>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <View style={{ flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 22, color }}>{text}</Text>
           {/* Bid ask spread */}
-          {matchingPut ? <View style={{ ...styles.bidAskSpread }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: resolveBidAskColor(matchingPut) }}>{matchingPut.bid_ask_spread}</Text>
+          {contract ? <View style={{ position: 'absolute', bottom: 2, left: 0, right: 0, height: 15, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', color: resolveBidAskColor(contract) }}>{contract.bid_ask_spread}</Text>
           </View> : null}
         </View>
-      </TouchableOpacity>
-    </View >
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function ButtonNoOption({ option_type }) {
+  const borderRadius = option_type === 'call' ? { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 } : { borderTopRightRadius: 8, borderBottomRightRadius: 8 };
+  return (
+    <TouchableOpacity
+      onPress={() => { }}
+      disabled
+      style={{ flex: 1, borderColor: colors.blue2, borderWidth: 1, ...borderRadius }}>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <View style={{ flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.blue2 }}>---</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -162,3 +201,4 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   }
 });
+

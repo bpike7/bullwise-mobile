@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Animated, View, Text, StyleSheet } from 'react-native';
 import { colors } from '../../styles';
 
-export default function ({ notification, handleCreateNotification }) {
-  const [message, setMessage] = useState();
+export default function ({ notification = {} }) {
   const translateXDefault = -500;
   const translateX = useRef(new Animated.Value(translateXDefault)).current;  // Initial value
   const opacity = useRef(new Animated.Value(1)).current;  // Initial value
@@ -14,7 +13,7 @@ export default function ({ notification, handleCreateNotification }) {
   }
 
   useEffect(() => {
-    if (!notification) return;
+    if (!notification.message) return;
     resetAnimationValues();
     Animated.timing(translateX, {
       toValue: 0,
@@ -36,7 +35,7 @@ export default function ({ notification, handleCreateNotification }) {
       <Animated.View style={{
         height: '100%',
         width: '100%',
-        backgroundColor: notification?.color || colors.blue0,
+        backgroundColor: colors[notification.color] || colors.white,
         borderRadius: 10,
         paddingLeft: 10,
         transform: [{ translateX }],

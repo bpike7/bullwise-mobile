@@ -23,7 +23,7 @@ export default new class {
 
   async getInitialData() {
     try {
-      const { data } = await this._requestor.post('/get-initial-data')
+      const { data } = await this._requestor.post('/collect-data')
       return data;
     } catch (err) {
       console.log(err);
@@ -39,12 +39,29 @@ export default new class {
     }
   }
 
-  async createOrder({ symbol, option_type, strike }) {
+  async createBuyOrder({ symbol, option_type, strike, size_relative, buy_sell_point }) {
     try {
-      const { data } = await this._requestor.post('/create-order', {
+      const { data } = await this._requestor.post('/create-buy-order', {
         symbol,
         option_type,
-        strike
+        strike,
+        size_relative,
+        buy_sell_point
+      });
+      return data;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async createSellOrder({ symbol, option_type, strike, size_relative, buy_sell_point }) {
+    try {
+      const { data } = await this._requestor.post('/create-sell-order', {
+        symbol,
+        option_type,
+        strike,
+        size_relative,
+        buy_sell_point
       });
       return data;
     } catch (err) {
