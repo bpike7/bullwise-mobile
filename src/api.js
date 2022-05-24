@@ -54,12 +54,10 @@ export default new class {
     }
   }
 
-  async createSellOrder({ symbol, option_type, strike, size_relative, buy_sell_point }) {
+  async createSellOrder({ position_id, size_relative, buy_sell_point }) {
     try {
       const { data } = await this._requestor.post('/create-sell-order', {
-        symbol,
-        option_type,
-        strike,
+        position_id,
         size_relative,
         buy_sell_point
       });

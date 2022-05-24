@@ -10,9 +10,8 @@ import api from '../../api.js';
 import Minichart from './Minichart';
 import AccountInfo from './AccountInfo';
 
-
 export default function () {
-  const [indices, setIndices] = useState({});
+  const [indices, setIndices] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
   const [orders, setOrders] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -49,8 +48,11 @@ export default function () {
     const strikeMap = {};
     // Find positions matching touched symbol
     const positionsMatchingSymbolInFocus = inFocus.positions || positions.filter(({ symbol }) => inFocus.symbol === symbol);
-    positionsMatchingSymbolInFocus.forEach(({ strike, option_type }) => {
-      strikeMap[strike] = option_type;
+    positionsMatchingSymbolInFocus.forEach((p) => {
+      strikeMap[p.strike] = {
+        option_type: p.option_type,
+        position_id: p.id
+      };
     });
     inFocus.strike_map = strikeMap;
     setFocus(inFocus);
@@ -66,7 +68,7 @@ export default function () {
   }
 
   function findAndHandleFocusFromPosition(position) {
-    const inFocus = watchlist.find(({ symbol }) => symbol === position.symbol);
+    const inFocus = [...watchlist, ...indices].find(({ symbol }) => symbol === position.symbol);
     if (!inFocus) console.log('Unable to find in focus!');
     inFocus.position = position;
     handleSetFocus(inFocus);
@@ -90,11 +92,9 @@ export default function () {
     });
   }
 
-  async function handleCreateSellOrder(option_type) {
+  async function handleCreateSellOrder(_, exisingPositionId) {
     await api.createSellOrder({
-      symbol: stockInFocus.symbol,
-      option_type,
-      strike: priceSliderPrice,
+      position_id: exisingPositionId,
       size_relative: relativeSize,
       buy_sell_point: buySellPoint
     });
@@ -137,10 +137,11 @@ export default function () {
           handleCreateBuyOrder={handleCreateBuyOrder}
           handleCreateSellOrder={handleCreateSellOrder}
         />
+        {watchlist.length === 0 ? <PlaceHolderMinicharts /> : null}
         <View style={{ flexDirection: 'row' }}>
-          <Minichart stock={indices.QQQ} symbol={'QQQ'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
-          <Minichart stock={indices.SPY} symbol={'SPY'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
-          <Minichart stock={indices.DIA} symbol={'DIA'} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
+          {indices.map((wl, i) =>
+            <Minichart key={i} stock={wl} stockInFocus={stockInFocus} handleSetFocus={handleSetFocus} />
+          )}
         </View>
         <View style={{ flexDirection: 'row' }}>
           {watchlist.map((wl, i) =>
@@ -178,3 +179,38 @@ const styles = StyleSheet.create({
     color: '#E3E3E3', fontSize: 30, fontWeight: 'bold'
   }
 });
+
+function PlaceHolderMinicharts({ }) {
+  return (
+    <View>
+      <View style={{ flexDirection: 'row' }}>
+        {[...Array(3)].map((_, i) => <View key={i} style={{ height: 125, flex: 1, borderWidth: 2, borderColor: colors.blue1, borderRadius: 8, margin: 5, padding: 3 }}></View>)}
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        {[...Array(3)].map((_, i) => <View key={i} style={{ height: 125, flex: 1, borderWidth: 2, borderColor: colors.blue1, borderRadius: 8, margin: 5, padding: 3 }}></View>)}
+      </View>
+    </View>
+  )
+}
+
+// function PlaceHolderPosition() {
+//   return (
+//     <View style={styles.container}>
+//         <View
+//           onPress={() => {
+//             if (stockInFocus.symbol === position.symbol) return;
+//             findAndHandleFocusFromPosition(position)
+//           }}
+//           style={{ ...styles.card, flex: 1, borderColor: stockInFocus.symbol === position.symbol ? colors.blue0 : colors.blue2, backgroundColor: colors.blue2 }}>
+//           <View style={{ flexDirection: 'row' }}>
+//             <View style={{ flex: 1 }}>
+//               <Text style={{ ...styles.text, fontSize: 24, color: stockInFocus.symbol === position.symbol ? colors.blue0 : colors.white }}>{position.symbol}</Text>
+//               <Text style={{ ...styles.text, fontSize: 16, opacity: .9, color: position.option_type === 'call' ? colors.green : colors.orange }}>{position.strike} {position.option_type.toUpperCase()}</Text>
+//             </View>
+//             <View style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+//               <Text style={styles.text}>{position.price_avg}</Text>
+//               <Text style={styles.text}>{position.quantity}</Text>
+//             </View>
+//       </View>
+//   )
+// }

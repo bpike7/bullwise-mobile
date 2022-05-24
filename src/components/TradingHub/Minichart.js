@@ -31,8 +31,7 @@ export default function ({ stock, symbol, stockInFocus = {}, handleSetFocus }) {
         <View>
           <Text style={{ fontSize: 22, color: symbolTextColor, fontWeight: 'bold' }}>{stock.symbol}</Text>
 
-
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 2, borderColor: colors.white, margin: 5 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 2, borderColor: colors.blue1, margin: 5 }}>
             {/* Price Now */}
             <View style={{ position: 'absolute', top: '50%', bottom: '50%', width: 65, height: 2, backgroundColor: colors.blue0, justifyContent: 'center' }}>
               <View style={{ position: 'absolute', right: 0, backgroundColor: colors.blue0, height: 6, width: 6, borderRadius: 100 }}></View>

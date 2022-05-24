@@ -1,9 +1,10 @@
+import { useEffect } from 'react';
 import { View, Text, TouchableHighlight, StyleSheet } from 'react-native';
 import { colors } from '../../styles';
 
 
 export default function ({ positions = [], orders = [], stockInFocus = {}, findAndHandleFocusFromPosition, findAndHandleFocusFromOrder }) {
-
+  useEffect(() => { }, [positions]);
   return (
     <View style={styles.container}>
       {positions.map((position, i) =>

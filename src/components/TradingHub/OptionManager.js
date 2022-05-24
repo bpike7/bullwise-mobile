@@ -3,16 +3,18 @@ import { useEffect } from 'react';
 import { colors } from '../../styles';
 
 
-export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateBuyOrder, handleCreateSellOrder }) {
+export default function ({ stockInFocus = {}, positions, priceSliderPrice, handleCreateBuyOrder, handleCreateSellOrder }) {
   const { strike_map = {}, calls = [], puts = [], symbol } = stockInFocus;
 
   const matchingCall = calls.find(({ strike }) => strike === priceSliderPrice);
   const matchingPut = puts.find(({ strike }) => strike === priceSliderPrice);
 
-  const existingPositionOptionType = strike_map[priceSliderPrice];
+  const existingPosition = strike_map[priceSliderPrice] || {};
 
   useEffect(() => {
   }, [stockInFocus]);
+  useEffect(() => {
+  }, [positions]);
 
   function resolveBidAskColor({ bid_ask_spread }) {
     if (bid_ask_spread >= .2 && bid_ask_spread < .35) return colors.yellow;
@@ -21,19 +23,20 @@ export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateBuyO
   }
 
   function resolveButton(option_type) {
-    if (!existingPositionOptionType && !matchingCall && !matchingPut) {
+    if (!existingPosition.option_type && !matchingCall && !matchingPut) {
       return <ButtonNoOption option_type={option_type} />
     }
-    if (existingPositionOptionType && existingPositionOptionType !== option_type) {
+    if (existingPosition.option_type && existingPosition.option_type !== option_type) {
       return <Button
         text={'SELL'}
         color={colors.red}
         optionType={option_type}
         resolveBidAskColor={resolveBidAskColor}
+        exisingPositionId={existingPosition.position_id}
         handleCreateOrder={handleCreateSellOrder}
       />
     }
-    if (existingPositionOptionType === option_type) {
+    if (existingPosition.option_type === option_type) {
       return <Button
         text={'BUY'}
         color={option_type === 'call' ? colors.green : colors.orange}
@@ -82,11 +85,11 @@ export default function ({ stockInFocus = {}, priceSliderPrice, handleCreateBuyO
   );
 }
 
-function Button({ option_type, text, color, handleCreateOrder, contract, resolveBidAskColor }) {
+function Button({ option_type, text, color, handleCreateOrder, contract, resolveBidAskColor, exisingPositionId }) {
   const borderRadius = option_type === 'call' ? { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 } : { borderTopRightRadius: 8, borderBottomRightRadius: 8 };
   return (
     <TouchableOpacity
-      onPress={() => handleCreateOrder(option_type)}
+      onPress={() => handleCreateOrder(option_type, exisingPositionId)}
       style={{ flex: 1, borderColor: color, borderWidth: 1, ...borderRadius }}>
       <View style={{ flex: 1, alignItems: 'center' }}>
         <View style={{ flex: 1, height: '100%', justifyContent: 'center', alignItems: 'center' }}>

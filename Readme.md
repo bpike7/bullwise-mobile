@@ -10,8 +10,9 @@
 
 # Backend
 <!-- - Replace all strike, symbol mentions with option symbol and utilize parsing function -->
-- Add strike data to indices
+<!-- - Add strike data to indices -->
 - Add default loading boxes for indexes
+<!-- - Inspect rate limiting violation tradier -->
 
 # Testing
 - Test Add to position
