@@ -11,9 +11,18 @@
 # Backend
 <!-- - Replace all strike, symbol mentions with option symbol and utilize parsing function -->
 <!-- - Add strike data to indices -->
-- Add default loading boxes for indexes
+<!-- - Add default loading boxes for indexes -->
 <!-- - Inspect rate limiting violation tradier -->
+- Add to position (even with stop loss)
+- Current option price on position
+- Position management modal
+  - Long press on position or order opens
+  - Has: 
+    - Everything on position
+    - Position P&L
+    - Button to add limit stop
+      - Support stop losses when underlying hits certain price
+      - Shows slider for underlying price
 
 # Testing
-- Test Add to position
 - Test clicking an open order and see if it is properly setting the slider strike price

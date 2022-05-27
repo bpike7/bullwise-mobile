@@ -5,6 +5,7 @@ import { colors } from '../../styles';
 
 export default function ({ positions = [], orders = [], stockInFocus = {}, findAndHandleFocusFromPosition, findAndHandleFocusFromOrder }) {
   useEffect(() => { }, [positions]);
+  const emptySlots = 3 - positions.length - orders.length;
   return (
     <View style={styles.container}>
       {positions.map((position, i) =>
@@ -71,6 +72,7 @@ export default function ({ positions = [], orders = [], stockInFocus = {}, findA
           </View>
         </TouchableHighlight>
       )}
+      {emptySlots > 0 ? [...Array(emptySlots)].map((_, i) => <View key={i} style={{ ...styles.card, minHeight: 55, flex: 1, borderColor: colors.blue2 }}></View>) : null}
     </View>
   );
 }
